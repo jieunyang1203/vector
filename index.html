@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>벡터의 크기와 방향</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 90vw;
+            max-width: 900px;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: normal;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        #canvas {
+            border: 1px solid #ddd;
+            display: block;
+            margin: 0 auto 20px;
+            cursor: crosshair;
+            width: 100%;
+            height: 500px;
+        }
+        .stats {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        .stat {
+            flex: 1;
+        }
+        .label {
+            color: #666;
+            font-size: 14px;
+        }
+        .value {
+            color: #000;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>벡터의 크기와 방향</h1>
+        <p class="subtitle">캔버스를 클릭하고 드래그하세요</p>
+        
+        <canvas id="canvas"></canvas>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="label">크기 (Magnitude)</div>
+                <div class="value" id="magnitude">0</div>
+            </div>
+            <div class="stat">
+                <div class="label">방향 (Direction)</div>
+                <div class="value" id="direction">0°</div>
+            </div>
+            <div class="stat">
+                <div class="label">성분 (x, y)</div>
+                <div class="value" id="components">(0, 0)</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let centerX, centerY;
+        let isDrawing = false;
+        
+        function setupCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            
+            ctx.scale(dpr, dpr);
+            
+            centerX = rect.width / 2;
+            centerY = rect.height / 2;
+            
+            clear();
+        }
+        
+        function clear() {
+            const rect = canvas.getBoundingClientRect();
+            
+            ctx.fillStyle = '#fafafa';
+            ctx.fillRect(0, 0, rect.width, rect.height);
+            
+            // 축
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            
+            ctx.beginPath();
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(rect.width, centerY);
+            ctx.moveTo(centerX, 0);
+            ctx.lineTo(centerX, rect.height);
+            ctx.stroke();
+            
+            // 원점
+            ctx.fillStyle = '#999';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function drawVector(endX, endY) {
+            clear();
+            
+            const dx = endX - centerX;
+            const dy = endY - centerY;
+            
+            // 안티앨리어싱을 위해 0.5픽셀 오프셋 적용
+            ctx.save();
+            ctx.translate(0.5, 0.5);
+            
+            // 벡터
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(Math.round(centerX), Math.round(centerY));
+            ctx.lineTo(Math.round(endX), Math.round(endY));
+            ctx.stroke();
+            
+            // 화살표
+            const angle = Math.atan2(dy, dx);
+            const arrowSize = 12;
+            
+            ctx.fillStyle = '#333';
+            ctx.beginPath();
+            ctx.moveTo(Math.round(endX), Math.round(endY));
+            ctx.lineTo(
+                Math.round(endX - arrowSize * Math.cos(angle - 0.5)),
+                Math.round(endY - arrowSize * Math.sin(angle - 0.5))
+            );
+            ctx.lineTo(
+                Math.round(endX - arrowSize * Math.cos(angle + 0.5)),
+                Math.round(endY - arrowSize * Math.sin(angle + 0.5))
+            );
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.restore();
+            
+            // 정보 업데이트
+            const magnitude = Math.sqrt(dx * dx + dy * dy);
+            const direction = Math.atan2(-dy, dx) * (180 / Math.PI);
+            const normalizedDirection = direction < 0 ? direction + 360 : direction;
+            
+            document.getElementById('magnitude').textContent = Math.round(magnitude);
+            document.getElementById('direction').textContent = Math.round(normalizedDirection) + '°';
+            document.getElementById('components').textContent = `(${Math.round(dx)}, ${Math.round(-dy)})`;
+        }
+        
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            drawVector(e.clientX - rect.left, e.clientY - rect.top);
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            drawVector(e.clientX - rect.left, e.clientY - rect.top);
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            isDrawing = false;
+        });
+        
+        // 초기화 및 리사이즈 이벤트
+        window.addEventListener('resize', setupCanvas);
+        setupCanvas();
+    </script>
+</body>
+</html>
